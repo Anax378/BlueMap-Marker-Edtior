@@ -350,7 +350,7 @@
             this.detail = "";
             this.position = { x: 0.0, y: 64.0, z: 0.0 };
             this.maxHeight = 120.0;
-            this.activeTab = "bmm"; // bmm, poi, html, line, shape, extrude
+            this.activeTab = "extrude"; // bmm, poi, html, line, shape, extrude
             // Extra fields
             this.poiIcon = "assets/poi.svg";
             this.anchorX = 25;
@@ -458,12 +458,11 @@
                     <button class="bmm-editor-close" id="bmm-editor-close">&times;</button>
                 </div>
                 <div class="bmm-tabs">
-                    <button class="bmm-tab active" data-tab="bmm">BMM Extrude</button>
                     <button class="bmm-tab" data-tab="poi">POI</button>
                     <button class="bmm-tab" data-tab="html">HTML</button>
                     <button class="bmm-tab" data-tab="line">Line</button>
                     <button class="bmm-tab" data-tab="shape">Shape</button>
-                    <button class="bmm-tab" data-tab="extrude">Extrude</button>
+                    <button class="bmm-tab active" data-tab="extrude">Extrude</button>
                 </div>
                 <div class="bmm-editor-body" id="bmm-editor-body-scroll">
 
@@ -530,7 +529,7 @@
                     </div>
 
                     <div class="bmm-field-group">
-                        <label for="bmm-json-text">BMM JSON raw data</label>
+                        <label for="bmm-json-text">BlueMap raw conf data</label>
                         <textarea class="bmm-input bmm-json-area" id="bmm-json-text" placeholder="Zde se vygeneruje JSON..."></textarea>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
                             <button class="bmm-btn bmm-btn-secondary" id="bmm-btn-copy" style="font-size: 11px; padding: 6px;">Kopírovat</button>
