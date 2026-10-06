@@ -381,6 +381,9 @@
             this.dragMoveHandler = null;
             this.dragUpHandler = null;
             this.cameraMoveListener = null;
+
+			// regular polygon setup
+			this.vertices = 12;
         }
 
         init() {
@@ -463,6 +466,7 @@
                     <button class="bmm-tab" data-tab="line">Line</button>
                     <button class="bmm-tab" data-tab="shape">Shape</button>
                     <button class="bmm-tab active" data-tab="extrude">Extrude</button>
+					<button class="bmm-tab" data-tab="regular-polygon">Regular Polygon</button>
                 </div>
                 <div class="bmm-editor-body" id="bmm-editor-body-scroll">
 
@@ -482,6 +486,12 @@
                         <div class="bmm-field-group">
                             <label for="bmm-input-max-height">Max Výška (Y)</label>
                             <input type="number" class="bmm-input" id="bmm-input-max-height" value="${this.maxHeight}" step="0.5">
+                        </div>
+                    </div>
+					<div class="bmm-row tab-regular-polygon">
+                        <div class="bmm-field-group">
+                            <label for="bmm-input-vertices">Počet vrcholů</label>
+                            <input type="number" class="bmm-input" id="bmm-input-vertices" value="${this.vertices}" min="3" step="1">
                         </div>
                     </div>
                     <div class="bmm-row" style="display: none;">
@@ -715,6 +725,7 @@
                 this.owner = "c7aa24e3-2080-425b-93b4-a3a74952c3d9";
                 this.fillColor = { r: 97, g: 221, b: 255, a: 0.2 };
                 this.points = [];
+				this.vertices = 12;
                 this.updatePreview();
                 this.updateUIFields();
             });
@@ -732,7 +743,7 @@
             document.getElementById("bmm-btn-import-text").addEventListener("click", () => {
                 let text = document.getElementById("bmm-json-text").value;
                 if (text) {
-                    this.importBmmJson(text);
+                    this.importBlueMapConf(text);
                 } else {
                     alert("Nejprve vložte JSON do textového pole.");
                 }
@@ -746,7 +757,7 @@
                 if (file) {
                     let reader = new FileReader();
                     reader.onload = (evt) => {
-                        this.importBmmJson(evt.target.result);
+                        this.importBlueMapConf(evt.target.result);
                     };
                     reader.readAsText(file);
                 }
@@ -780,7 +791,7 @@
                 // We show/hide fields based on class "tab-<tabname>".
                 // If a field has NO "tab-*" class, it's shared (like label, detail, positions, points list).
                 // Actually, let's explicitly hide/show.
-                const allTabClasses = ["tab-bmm", "tab-poi", "tab-html", "tab-line", "tab-shape", "tab-extrude"];
+                const allTabClasses = ["tab-bmm", "tab-poi", "tab-html", "tab-line", "tab-shape", "tab-extrude", "tab-regular-polygon"];
                 
                 // Add specific classes to original elements dynamically:
                 const setClass = (id, cls) => { let el = document.getElementById(id); if (el && el.parentElement) el.parentElement.classList.add(...cls); };
@@ -842,6 +853,7 @@
             document.getElementById("bmm-input-depth-test")?.addEventListener("change", e => { this.depthTest = e.target.checked; this.updatePreview(); });
             document.getElementById("bmm-input-min-dist")?.addEventListener("input", e => { this.minDistance = parseFloat(e.target.value)||0; this.updatePreview(); });
             document.getElementById("bmm-input-max-dist")?.addEventListener("input", e => { this.maxDistance = parseFloat(e.target.value)||0; this.updatePreview(); });
+			document.getElementById("bmm-input-vertices")?.addEventListener("input", e => { this.vertices = parseInt(e.target.value)||3; this.updatePreview(); });
 
 
         }
@@ -891,7 +903,7 @@
             if (this.activeTab === "poi") targetClass = window.BlueMap.PoiMarker;
             else if (this.activeTab === "html") targetClass = window.BlueMap.HtmlMarker;
             else if (this.activeTab === "line") targetClass = window.BlueMap.LineMarker;
-            else if (this.activeTab === "shape") targetClass = window.BlueMap.ShapeMarker;
+            else if (this.activeTab === "shape" || this.activeTab === "regular-polygon") targetClass = window.BlueMap.ShapeMarker;
             
             if (this.previewMarker && (!(this.previewMarker instanceof targetClass) || this.activeTab === "html")) {
                 this.markerSet.remove(this.previewMarker);
@@ -1143,6 +1155,24 @@
             });
         }
 
+		generateRegularPolygonVertices(center, firstVertex, vertexCount){
+			const ret = [];
+			const dx = firstVertex.x - center.x;
+			const dz = firstVertex.z - center.z;
+
+			const dtheta = (2 * Math.PI) / vertexCount;
+			for(let i = 0; i < vertexCount; i++){
+				const theta = i * dtheta;
+				const x = dx * Math.cos(theta) - dz * Math.sin(theta);
+				const z = dx * Math.sin(theta) + dz * Math.cos(theta);
+				ret.push({
+					x: x + center.x,
+					z: z + center.z
+				});
+			}
+			return ret;
+		}	
+
         updatePreview() {
             if (!this.previewMarker || !this.markerSet) return;
             
@@ -1189,7 +1219,18 @@
                 markerData.lineColor = lineCol;
                 markerData.fillColor = fillCol;
                 if (this.points.length < 3) canShow = false;
-            }
+            }else if(this.activeTab === "regular-polygon"){
+				canShow = this.points.length >= 2;
+				if(canShow){
+					markerData.position = {x: this.points[0].x, y: this.points[0].y, z: this.points[0].z};
+					markerData.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
+					markerData.shapeY = this.shapeY;
+					markerData.depthTest = this.depthTest;
+					markerData.lineWidth = this.lineWidth;
+					markerData.lineColor = lineCol;
+					markerData.fillColor = fillCol;
+				}
+			}
             
             if (canShow) {
                 this.previewMarker.visible = true;
@@ -1296,6 +1337,8 @@
             return null;
         }
 
+		
+
         generateBmmJson() {
             let mapName = window.bluemap?.mapViewer?.map?.data?.id || "world";
             let lbl = this.label || "Unnamed";
@@ -1328,7 +1371,7 @@
 }`;
             }
             
-            // Native BlueMap JSON
+            // Native BlueMap conf
             let base = {
                 type: this.activeTab,
                 position: { x: this.position.x, y: this.position.y, z: this.position.z },
@@ -1367,12 +1410,122 @@
                 base["line-width"] = this.lineWidth;
                 base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
                 base["fill-color"] = this.fillColor;
-            }
+            } else if (this.activeTab === "regular-polygon"){
+				if(this.points.length >= 2){
+					base.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
+				}else{
+					base.shape = [];
+				}
+				base.type = "shape";
+                base["shape-y"] = this.shapeY;
+                base["depth-test"] = this.depthTest;
+                base["line-width"] = this.lineWidth;
+                base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
+                base["fill-color"] = this.fillColor;
+			}
             
             let finalObj = {};
             finalObj[id] = base;
             let stringified = JSON.stringify(finalObj, null, 2);
 			return stringified.slice(1, -1).replace(/"([^"]+)":/g, '$1:');
+        }
+
+		importBlueMapConf(confStr) {
+            try {
+                // Parse the HOCON/Loose-JSON text
+				let json = ("{" + confStr + "}").replace(/([{,]\s*)([a-zA-Z0-9_-]+)\s*:/g, '$1"$2":');
+				console.log(json);
+                let parsed = JSON.parse(json);
+                let id = Object.keys(parsed)[0];
+                let marker = parsed[id];
+
+                if (!marker || !marker.type) {
+                    throw new Error("Invalid structure: missing marker type.");
+                }
+
+                // 1. Import Common Properties
+                this.label = marker.label || id;
+                this.detail = marker.detail || "";
+                
+                if (marker.position) {
+                    this.position = { 
+                        x: marker.position.x || 0, 
+                        y: marker.position.y || 64, 
+                        z: marker.position.z || 0 
+                    };
+                }
+
+                this.listed = marker.listed !== false;
+                this.minDistance = marker["min-distance"] !== undefined ? marker["min-distance"] : 10;
+                this.maxDistance = marker["max-distance"] !== undefined ? marker["max-distance"] : 10000000;
+                
+                if (marker["depth-test"] !== undefined) this.depthTest = marker["depth-test"];
+                if (marker["line-width"] !== undefined) this.lineWidth = marker["line-width"];
+
+                // Import color (favor fill-color, fallback to line-color)
+                let colorObj = marker["fill-color"] || marker["line-color"];
+                if (colorObj) {
+                    this.fillColor = {
+                        r: colorObj.r || 0,
+                        g: colorObj.g || 0,
+                        b: colorObj.b || 0,
+                        a: colorObj.a !== undefined ? colorObj.a : 0.2
+                    };
+                }
+
+                this.points = [];
+                this.activeTab = marker.type; // "poi", "html", "line", "shape", or "extrude"
+
+                // 2. Import Type-Specific Properties & Points
+                if (this.activeTab === "poi") {
+                    this.poiIcon = marker.icon || "assets/poi.svg";
+                    if (marker.anchor) {
+                        this.anchorX = marker.anchor.x || 25;
+                        this.anchorY = marker.anchor.y || 45;
+                    }
+                } 
+                else if (this.activeTab === "html") {
+                    this.htmlText = marker.html || "<div style='color:white;'>HTML Marker</div>";
+                    if (marker.anchor) {
+                        this.anchorX = marker.anchor.x || 25;
+                        this.anchorY = marker.anchor.y || 45;
+                    }
+                } 
+                else if (this.activeTab === "line") {
+                    if (Array.isArray(marker.line)) {
+                        this.points = marker.line.map(p => ({ x: p.x, y: p.y, z: p.z }));
+                    }
+                } 
+                else if (this.activeTab === "shape") {
+                    this.shapeY = marker["shape-y"] !== undefined ? marker["shape-y"] : 64;
+                    if (Array.isArray(marker.shape)) {
+                        // Shapes only store X and Z, we use the base position Y for the 3D visual editor points
+                        this.points = marker.shape.map(p => ({ x: p.x, y: this.position.y, z: p.z }));
+                    }
+                } 
+                else if (this.activeTab === "extrude") {
+                    this.shapeMinY = marker["shape-min-y"] !== undefined ? marker["shape-min-y"] : 50;
+                    this.shapeMaxY = marker["shape-max-y"] !== undefined ? marker["shape-max-y"] : 80;
+                    if (Array.isArray(marker.shape)) {
+                        this.points = marker.shape.map(p => ({ x: p.x, y: this.position.y, z: p.z }));
+                    }
+                }
+
+                // 3. Update the UI
+                this.updateUIFields();
+                this.updatePreview();
+
+                // Trigger a click on the corresponding tab button to ensure visibility logic runs
+                let tabBtn = document.querySelector(`.bmm-tab[data-tab="${this.activeTab}"]`);
+                if (tabBtn) {
+                    tabBtn.click();
+                }
+
+                alert("Import úspěšný!");
+            } catch (e) {
+                console.error(e);
+                alert("Nebylo možné načíst konfiguraci. Ujistěte se, že formát je správný:\n" + e.message);
+            }
         }
 
         importBmmJson(jsonStr) {
@@ -1466,6 +1619,7 @@
 
             document.getElementById("bmm-color-opacity").value = this.fillColor.a;
             document.getElementById("bmm-opacity-text").innerText = Math.round(this.fillColor.a * 100) + "%";
+			document.getElementById("bmm-input-vertices").value = this.vertices;
         }
 
         updateUIPointsList() {
