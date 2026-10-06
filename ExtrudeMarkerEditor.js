@@ -554,8 +554,6 @@
                         • <b>Alt + Levý klik</b>: Nastavit základní pozici (XYZ)<br>
                         • <b>Ctrl + Levý klik na bod</b>: Smazat bod
                     </div>
-                
-
                     <div class="bmm-field-group tab-poi">
                         <label>Icon URL</label>
                         <input type="text" class="bmm-input" id="bmm-input-poi-icon" value="${this.poiIcon}">
@@ -578,7 +576,7 @@
                         <label>Line Width</label>
                         <input type="number" class="bmm-input" id="bmm-input-line-width" value="${this.lineWidth}">
                     </div>
-                    <div class="bmm-field-group tab-shape">
+                    <div class="bmm-field-group tab-shape tab-regular-polygon">
                         <label>Shape Y</label>
                         <input type="number" class="bmm-input" id="bmm-input-shape-y" value="${this.shapeY}">
                     </div>
