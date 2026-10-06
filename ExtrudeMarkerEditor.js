@@ -350,7 +350,7 @@
             this.detail = "";
             this.position = { x: 0.0, y: 64.0, z: 0.0 };
             this.maxHeight = 120.0;
-            this.activeTab = "extrude"; // bmm, poi, html, line, shape, extrude
+            this.activeTab = "extrude"; // bmm, poi, html, line, shape, extrude, regular-polygon, extrude-regular-polygon
             // Extra fields
             this.poiIcon = "assets/poi.svg";
             this.anchorX = 25;
@@ -466,7 +466,8 @@
                     <button class="bmm-tab" data-tab="line">Line</button>
                     <button class="bmm-tab" data-tab="shape">Shape</button>
                     <button class="bmm-tab active" data-tab="extrude">Extrude</button>
-                    <button class="bmm-tab" data-tab="regular-polygon">Regular Polygon</button>
+                    <button class="bmm-tab" data-tab="regular-polygon">Reg. Poly</button>
+                    <button class="bmm-tab" data-tab="extrude-regular-polygon">Extrude Reg. Poly</button>
                 </div>
                 <div class="bmm-editor-body" id="bmm-editor-body-scroll">
 
@@ -488,7 +489,7 @@
                             <input type="number" class="bmm-input" id="bmm-input-max-height" value="${this.maxHeight}" step="0.5">
                         </div>
                     </div>
-                    <div class="bmm-row tab-regular-polygon">
+                    <div class="bmm-row tab-regular-polygon tab-extrude-regular-polygon">
                         <div class="bmm-field-group">
                             <label for="bmm-input-vertices">Počet vrcholů</label>
                             <input type="number" class="bmm-input" id="bmm-input-vertices" value="${this.vertices}" min="3" step="1">
@@ -572,7 +573,7 @@
                         <label>HTML Content</label>
                         <textarea class="bmm-input" id="bmm-input-html" style="font-family:monospace;">${this.htmlText}</textarea>
                     </div>
-                    <div class="bmm-field-group tab-line tab-shape tab-extrude">
+                    <div class="bmm-field-group tab-line tab-shape tab-extrude tab-regular-polygon tab-extrude-regular-polygon">
                         <label>Line Width</label>
                         <input type="number" class="bmm-input" id="bmm-input-line-width" value="${this.lineWidth}">
                     </div>
@@ -580,7 +581,7 @@
                         <label>Shape Y</label>
                         <input type="number" class="bmm-input" id="bmm-input-shape-y" value="${this.shapeY}">
                     </div>
-                    <div class="bmm-row tab-extrude">
+                    <div class="bmm-row tab-extrude tab-extrude-regular-polygon">
                         <div class="bmm-field-group">
                             <label>Shape Min Y</label>
                             <input type="number" class="bmm-input" id="bmm-input-shape-min-y" value="${this.shapeMinY}">
@@ -590,11 +591,11 @@
                             <input type="number" class="bmm-input" id="bmm-input-shape-max-y" value="${this.shapeMaxY}">
                         </div>
                     </div>
-                    <div class="bmm-row tab-poi tab-html tab-line tab-shape tab-extrude">
+                    <div class="bmm-row tab-poi tab-html tab-line tab-shape tab-extrude tab-regular-polygon tab-extrude-regular-polygon">
                         <label style="color: rgba(255,255,255,0.6); font-size:11px;"><input type="checkbox" id="bmm-input-listed" ${this.listed ? "checked" : ""}> Listed</label>
-                        <label style="color: rgba(255,255,255,0.6); font-size:11px;" class="tab-line tab-shape tab-extrude"><input type="checkbox" id="bmm-input-depth-test" ${this.depthTest ? "checked" : ""}> Depth Test</label>
+                        <label style="color: rgba(255,255,255,0.6); font-size:11px;" class="tab-line tab-shape tab-extrude tab-regular-polygon tab-extrude-regular-polygon"><input type="checkbox" id="bmm-input-depth-test" ${this.depthTest ? "checked" : ""}> Depth Test</label>
                     </div>
-                    <div class="bmm-row tab-poi tab-html tab-line tab-shape tab-extrude">
+                    <div class="bmm-row tab-poi tab-html tab-line tab-shape tab-extrude tab-regular-polygon tab-extrude-regular-polygon">
                         <div class="bmm-field-group">
                             <label>Min Distance</label>
                             <input type="number" class="bmm-input" id="bmm-input-min-dist" value="${this.minDistance}">
@@ -605,8 +606,8 @@
                         </div>
                     </div>
     
-</div>
-<div class="bmm-footer">
+                </div>
+                <div class="bmm-footer">
                     <button class="bmm-btn bmm-btn-destructive" id="bmm-btn-clear" style="flex-grow: 1;">Vymazat</button>
                     <button class="bmm-btn bmm-btn-secondary" id="bmm-btn-import-file">Nahrát</button>
                     <input type="file" id="bmm-file-input" style="display: none;" accept=".json">
@@ -786,18 +787,13 @@
                     t.classList.toggle("active", t.dataset.tab === tab);
                 });
                 
-                // We show/hide fields based on class "tab-<tabname>".
-                // If a field has NO "tab-*" class, it's shared (like label, detail, positions, points list).
-                // Actually, let's explicitly hide/show.
-                const allTabClasses = ["tab-bmm", "tab-poi", "tab-html", "tab-line", "tab-shape", "tab-extrude", "tab-regular-polygon"];
+                const allTabClasses = ["tab-bmm", "tab-poi", "tab-html", "tab-line", "tab-shape", "tab-extrude", "tab-regular-polygon", "tab-extrude-regular-polygon"];
                 
-                // Add specific classes to original elements dynamically:
                 const setClass = (id, cls) => { let el = document.getElementById(id); if (el && el.parentElement) el.parentElement.classList.add(...cls); };
                 setClass("bmm-input-max-height", ["tab-bmm"]);
                 setClass("bmm-input-marker-set", ["tab-bmm"]);
                 setClass("bmm-input-owner", ["tab-bmm"]);
                 
-                // The points list is for line, shape, extrude, bmm
                 let pointsEl = document.getElementById("bmm-points-list");
                 if (pointsEl) {
                     pointsEl.parentElement.style.display = (tab === 'poi' || tab === 'html') ? 'none' : 'block';
@@ -820,8 +816,6 @@
                     }
                     if (hasTabClass) {
                         el.style.display = shouldShow ? (el.classList.contains("bmm-row") ? "grid" : "flex") : "none";
-                    } else if (el.classList.contains("tab-poi-inline")) {
-                         // handle inline labels if needed
                     }
                 });
                 
@@ -902,6 +896,7 @@
             else if (this.activeTab === "html") targetClass = window.BlueMap.HtmlMarker;
             else if (this.activeTab === "line") targetClass = window.BlueMap.LineMarker;
             else if (this.activeTab === "shape" || this.activeTab === "regular-polygon") targetClass = window.BlueMap.ShapeMarker;
+            else if (this.activeTab === "extrude" || this.activeTab === "extrude-regular-polygon") targetClass = window.BlueMap.ExtrudeMarker;
             
             if (this.previewMarker && (!(this.previewMarker instanceof targetClass) || this.activeTab === "html")) {
                 this.markerSet.remove(this.previewMarker);
@@ -1169,7 +1164,7 @@
                 });
             }
             return ret;
-        }    
+        }  
 
         updatePreview() {
             if (!this.previewMarker || !this.markerSet) return;
@@ -1217,12 +1212,17 @@
                 markerData.lineColor = lineCol;
                 markerData.fillColor = fillCol;
                 if (this.points.length < 3) canShow = false;
-            }else if(this.activeTab === "regular-polygon"){
+            } else if(this.activeTab === "regular-polygon" || this.activeTab === "extrude-regular-polygon"){
                 canShow = this.points.length >= 2;
                 if(canShow){
                     markerData.position = {x: this.points[0].x, y: this.points[0].y, z: this.points[0].z};
                     markerData.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
-                    markerData.shapeY = this.shapeY;
+                    if (this.activeTab === "extrude-regular-polygon") {
+                        markerData.shapeMinY = this.shapeMinY;
+                        markerData.shapeMaxY = this.shapeMaxY;
+                    } else {
+                        markerData.shapeY = this.shapeY;
+                    }
                     markerData.depthTest = this.depthTest;
                     markerData.lineWidth = this.lineWidth;
                     markerData.lineColor = lineCol;
@@ -1408,14 +1408,22 @@
                 base["line-width"] = this.lineWidth;
                 base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
                 base["fill-color"] = this.fillColor;
-            } else if (this.activeTab === "regular-polygon"){
+            } else if (this.activeTab === "regular-polygon" || this.activeTab === "extrude-regular-polygon"){
                 if(this.points.length >= 2){
                     base.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
                 }else{
                     base.shape = [];
                 }
-                base.type = "shape";
-                base["shape-y"] = this.shapeY;
+                
+                if (this.activeTab === "extrude-regular-polygon") {
+                    base.type = "extrude";
+                    base["shape-min-y"] = this.shapeMinY;
+                    base["shape-max-y"] = this.shapeMaxY;
+                } else {
+                    base.type = "shape";
+                    base["shape-y"] = this.shapeY;
+                }
+                
                 base["depth-test"] = this.depthTest;
                 base["line-width"] = this.lineWidth;
                 base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
