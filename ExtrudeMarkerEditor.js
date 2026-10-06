@@ -382,8 +382,8 @@
             this.dragUpHandler = null;
             this.cameraMoveListener = null;
 
-			// regular polygon setup
-			this.vertices = 12;
+            // regular polygon setup
+            this.vertices = 12;
         }
 
         init() {
@@ -466,7 +466,7 @@
                     <button class="bmm-tab" data-tab="line">Line</button>
                     <button class="bmm-tab" data-tab="shape">Shape</button>
                     <button class="bmm-tab active" data-tab="extrude">Extrude</button>
-					<button class="bmm-tab" data-tab="regular-polygon">Regular Polygon</button>
+                    <button class="bmm-tab" data-tab="regular-polygon">Regular Polygon</button>
                 </div>
                 <div class="bmm-editor-body" id="bmm-editor-body-scroll">
 
@@ -488,7 +488,7 @@
                             <input type="number" class="bmm-input" id="bmm-input-max-height" value="${this.maxHeight}" step="0.5">
                         </div>
                     </div>
-					<div class="bmm-row tab-regular-polygon">
+                    <div class="bmm-row tab-regular-polygon">
                         <div class="bmm-field-group">
                             <label for="bmm-input-vertices">Počet vrcholů</label>
                             <input type="number" class="bmm-input" id="bmm-input-vertices" value="${this.vertices}" min="3" step="1">
@@ -723,7 +723,7 @@
                 this.owner = "c7aa24e3-2080-425b-93b4-a3a74952c3d9";
                 this.fillColor = { r: 97, g: 221, b: 255, a: 0.2 };
                 this.points = [];
-				this.vertices = 12;
+                this.vertices = 12;
                 this.updatePreview();
                 this.updateUIFields();
             });
@@ -851,7 +851,7 @@
             document.getElementById("bmm-input-depth-test")?.addEventListener("change", e => { this.depthTest = e.target.checked; this.updatePreview(); });
             document.getElementById("bmm-input-min-dist")?.addEventListener("input", e => { this.minDistance = parseFloat(e.target.value)||0; this.updatePreview(); });
             document.getElementById("bmm-input-max-dist")?.addEventListener("input", e => { this.maxDistance = parseFloat(e.target.value)||0; this.updatePreview(); });
-			document.getElementById("bmm-input-vertices")?.addEventListener("input", e => { this.vertices = parseInt(e.target.value)||3; this.updatePreview(); });
+            document.getElementById("bmm-input-vertices")?.addEventListener("input", e => { this.vertices = parseInt(e.target.value)||3; this.updatePreview(); });
 
 
         }
@@ -1153,23 +1153,23 @@
             });
         }
 
-		generateRegularPolygonVertices(center, firstVertex, vertexCount){
-			const ret = [];
-			const dx = firstVertex.x - center.x;
-			const dz = firstVertex.z - center.z;
+        generateRegularPolygonVertices(center, firstVertex, vertexCount){
+            const ret = [];
+            const dx = firstVertex.x - center.x;
+            const dz = firstVertex.z - center.z;
 
-			const dtheta = (2 * Math.PI) / vertexCount;
-			for(let i = 0; i < vertexCount; i++){
-				const theta = i * dtheta;
-				const x = dx * Math.cos(theta) - dz * Math.sin(theta);
-				const z = dx * Math.sin(theta) + dz * Math.cos(theta);
-				ret.push({
-					x: x + center.x,
-					z: z + center.z
-				});
-			}
-			return ret;
-		}	
+            const dtheta = (2 * Math.PI) / vertexCount;
+            for(let i = 0; i < vertexCount; i++){
+                const theta = i * dtheta;
+                const x = dx * Math.cos(theta) - dz * Math.sin(theta);
+                const z = dx * Math.sin(theta) + dz * Math.cos(theta);
+                ret.push({
+                    x: x + center.x,
+                    z: z + center.z
+                });
+            }
+            return ret;
+        }    
 
         updatePreview() {
             if (!this.previewMarker || !this.markerSet) return;
@@ -1218,25 +1218,25 @@
                 markerData.fillColor = fillCol;
                 if (this.points.length < 3) canShow = false;
             }else if(this.activeTab === "regular-polygon"){
-				canShow = this.points.length >= 2;
-				if(canShow){
-					markerData.position = {x: this.points[0].x, y: this.points[0].y, z: this.points[0].z};
-					markerData.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
-					markerData.shapeY = this.shapeY;
-					markerData.depthTest = this.depthTest;
-					markerData.lineWidth = this.lineWidth;
-					markerData.lineColor = lineCol;
-					markerData.fillColor = fillCol;
-				}
-			}
+                canShow = this.points.length >= 2;
+                if(canShow){
+                    markerData.position = {x: this.points[0].x, y: this.points[0].y, z: this.points[0].z};
+                    markerData.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
+                    markerData.shapeY = this.shapeY;
+                    markerData.depthTest = this.depthTest;
+                    markerData.lineWidth = this.lineWidth;
+                    markerData.lineColor = lineCol;
+                    markerData.fillColor = fillCol;
+                }
+            }
             
             if (canShow) {
                 this.previewMarker.visible = true;
-				try{
+                try{
                 this.previewMarker.updateFromData(markerData);
-				}catch(e){
-					//¯\_(ツ)_/¯
-				}
+                }catch(e){
+                    //¯\_(ツ)_/¯
+                }
             } else {
                 this.previewMarker.visible = false;
             }
@@ -1335,7 +1335,7 @@
             return null;
         }
 
-		
+        
 
         generateBmmJson() {
             let mapName = window.bluemap?.mapViewer?.map?.data?.id || "world";
@@ -1409,30 +1409,30 @@
                 base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
                 base["fill-color"] = this.fillColor;
             } else if (this.activeTab === "regular-polygon"){
-				if(this.points.length >= 2){
-					base.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
-				}else{
-					base.shape = [];
-				}
-				base.type = "shape";
+                if(this.points.length >= 2){
+                    base.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
+                }else{
+                    base.shape = [];
+                }
+                base.type = "shape";
                 base["shape-y"] = this.shapeY;
                 base["depth-test"] = this.depthTest;
                 base["line-width"] = this.lineWidth;
                 base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
                 base["fill-color"] = this.fillColor;
-			}
+            }
             
             let finalObj = {};
             finalObj[id] = base;
             let stringified = JSON.stringify(finalObj, null, 2);
-			return stringified.slice(1, -1).replace(/"([^"]+)":/g, '$1:');
+            return stringified.slice(1, -1).replace(/"([^"]+)":/g, '$1:');
         }
 
-		importBlueMapConf(confStr) {
+        importBlueMapConf(confStr) {
             try {
                 // Parse the HOCON/Loose-JSON text
-				let json = ("{" + confStr + "}").replace(/([{,]\s*)([a-zA-Z0-9_-]+)\s*:/g, '$1"$2":');
-				console.log(json);
+                let json = ("{" + confStr + "}").replace(/([{,]\s*)([a-zA-Z0-9_-]+)\s*:/g, '$1"$2":');
+                console.log(json);
                 let parsed = JSON.parse(json);
                 let id = Object.keys(parsed)[0];
                 let marker = parsed[id];
@@ -1617,7 +1617,7 @@
 
             document.getElementById("bmm-color-opacity").value = this.fillColor.a;
             document.getElementById("bmm-opacity-text").innerText = Math.round(this.fillColor.a * 100) + "%";
-			document.getElementById("bmm-input-vertices").value = this.vertices;
+            document.getElementById("bmm-input-vertices").value = this.vertices;
         }
 
         updateUIPointsList() {
