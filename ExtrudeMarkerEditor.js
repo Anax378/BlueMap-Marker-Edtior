@@ -6,7 +6,7 @@
  *
  * Controls:
  * - Ctrl + X: Toggle editor panel and editing mode
- * - Shift + Left Click on Map: Add a new polygon point (vertex)
+ * - Shift + Left Click on Map: Add a new polygon point (vertex) / Move center
  * - Left Click + Drag point handle: Move an existing point
  * - Right Click point handle: Delete the point
  */
@@ -384,11 +384,12 @@
 
             // regular polygon setup
             this.vertices = 12;
+            this.radius = 10;
+            this.angle = 0;
         }
 
         init() {
             // Patch BlueMap's HtmlMarker.dispose to prevent a native bug/crash
-            // where calling dispose on a removed HtmlMarker throws due to undefined element
             if (window.BlueMap && window.BlueMap.HtmlMarker) {
                 window.BlueMap.HtmlMarker.prototype.dispose = function () {
                     try {
@@ -402,8 +403,7 @@
                 };
             }
 
-            // Patch BlueMap's MarkerSet.updateMarkerSetsFromData to prevent it
-            // from deleting our bmm-editor-set during automatic map updates
+            // Patch BlueMap's MarkerSet.updateMarkerSetsFromData
             if (window.BlueMap && window.BlueMap.MarkerSet) {
                 const originalUpdateMarkerSets = window.BlueMap.MarkerSet.prototype.updateMarkerSetsFromData;
                 window.BlueMap.MarkerSet.prototype.updateMarkerSetsFromData = function (data = {}, ignore = []) {
@@ -484,7 +484,7 @@
                             <label for="bmm-input-position">Základní Pozice (X, Y, Z)</label>
                             <input type="text" class="bmm-input" id="bmm-input-position" value="${this.position.x.toFixed(1)}, ${this.position.y.toFixed(1)}, ${this.position.z.toFixed(1)}">
                         </div>
-                        <div class="bmm-field-group">
+                        <div class="bmm-field-group tab-bmm">
                             <label for="bmm-input-max-height">Max Výška (Y)</label>
                             <input type="number" class="bmm-input" id="bmm-input-max-height" value="${this.maxHeight}" step="0.5">
                         </div>
@@ -494,7 +494,20 @@
                             <label for="bmm-input-vertices">Počet vrcholů</label>
                             <input type="number" class="bmm-input" id="bmm-input-vertices" value="${this.vertices}" min="3" step="1">
                         </div>
+                        <div class="bmm-field-group">
+                            <label for="bmm-input-radius">Poloměr (Radius)</label>
+                            <input type="number" class="bmm-input" id="bmm-input-radius" value="${this.radius}" min="0.1" step="0.5">
+                        </div>
                     </div>
+                    
+                    <div class="bmm-field-group tab-regular-polygon tab-extrude-regular-polygon">
+                        <label>Úhel (Angle °)</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" class="bmm-input" id="bmm-slider-angle" min="0" max="360" step="1" value="${this.angle}" style="padding: 0; height: 14px; flex-grow: 1; cursor: pointer;">
+                            <input type="number" class="bmm-input" id="bmm-input-angle" value="${this.angle}" step="1" style="width: 75px; flex-shrink: 0;">
+                        </div>
+                    </div>
+
                     <div class="bmm-row" style="display: none;">
                         <div class="bmm-field-group">
                             <label for="bmm-input-marker-set">Marker Set</label>
@@ -505,7 +518,6 @@
                             <label for="bmm-input-owner">Owner UUID</label>
                             <input type="text" class="bmm-input" id="bmm-input-owner" value="${this.owner}">
                         </div>
-                        
                     </div>
                     <div class="bmm-field-group">
                         <label>Barva výplně a průhlednost</label>
@@ -551,7 +563,7 @@
                     <div class="bmm-instructions">
                         <strong>Nápověda:</strong><br>
                         • <b>Ctrl + X</b>: Zobrazit / Skrýt toto menu<br>
-                        • <b>Shift + Levý klik</b>: Vytvořit nový bod na mapě<br>
+                        • <b>Shift + Levý klik</b>: Vytvořit nový bod na mapě / Přesunout střední<br>
                         • <b>Alt + Levý klik</b>: Nastavit základní pozici (XYZ)<br>
                         • <b>Ctrl + Levý klik na bod</b>: Smazat bod
                     </div>
@@ -707,7 +719,6 @@
                 this.detail = "";
                 this.position = { x: 0.0, y: 64.0, z: 0.0 };
                 this.maxHeight = 120.0;
-                // Reset extra fields but keep activeTab
                 this.poiIcon = "assets/poi.svg";
                 this.anchorX = 25;
                 this.anchorY = 45;
@@ -725,6 +736,8 @@
                 this.fillColor = { r: 97, g: 221, b: 255, a: 0.2 };
                 this.points = [];
                 this.vertices = 12;
+                this.radius = 10;
+                this.angle = 0;
                 this.updatePreview();
                 this.updateUIFields();
             });
@@ -796,7 +809,8 @@
                 
                 let pointsEl = document.getElementById("bmm-points-list");
                 if (pointsEl) {
-                    pointsEl.parentElement.style.display = (tab === 'poi' || tab === 'html') ? 'none' : 'block';
+                    const hidePoints = ["poi", "html", "regular-polygon", "extrude-regular-polygon"];
+                    pointsEl.parentElement.style.display = hidePoints.includes(tab) ? 'none' : 'block';
                 }
                 
                 let colorPicker = document.getElementById("bmm-color-picker");
@@ -846,8 +860,21 @@
             document.getElementById("bmm-input-min-dist")?.addEventListener("input", e => { this.minDistance = parseFloat(e.target.value)||0; this.updatePreview(); });
             document.getElementById("bmm-input-max-dist")?.addEventListener("input", e => { this.maxDistance = parseFloat(e.target.value)||0; this.updatePreview(); });
             document.getElementById("bmm-input-vertices")?.addEventListener("input", e => { this.vertices = parseInt(e.target.value)||3; this.updatePreview(); });
-
-
+            document.getElementById("bmm-input-radius")?.addEventListener("input", e => { this.radius = parseFloat(e.target.value)||0.1; this.updatePreview(); });
+            
+            // Connected slider and input box logic for the Angle
+            document.getElementById("bmm-input-angle")?.addEventListener("input", e => { 
+                this.angle = parseFloat(e.target.value)||0; 
+                let slider = document.getElementById("bmm-slider-angle");
+                if(slider) slider.value = this.angle;
+                this.updatePreview(); 
+            });
+            document.getElementById("bmm-slider-angle")?.addEventListener("input", e => { 
+                this.angle = parseFloat(e.target.value)||0; 
+                let input = document.getElementById("bmm-input-angle");
+                if(input) input.value = this.angle;
+                this.updatePreview(); 
+            });
         }
 
         hideUI() {
@@ -931,8 +958,8 @@
                     e.preventDefault();
                     let hit = this.getTerrainIntersection(e.clientX, e.clientY);
                     if (hit) {
-                        if (this.activeTab === "poi" || this.activeTab === "html") {
-                            // For POI/HTML, shift+click moves the marker position
+                        if (["poi", "html", "regular-polygon", "extrude-regular-polygon"].includes(this.activeTab)) {
+                            // For POI/HTML/Regular Polygons, shift+click moves the marker position (center)
                             this.position = {
                                 x: parseFloat(hit.x.toFixed(1)),
                                 y: parseFloat(hit.y.toFixed(1)),
@@ -1074,8 +1101,6 @@
                     isNew = true;
                 }
 
-                // 2D Viewport Screen Projection Check (NDC):
-                // Projects world position (x, y, z) into Normalized Device Coordinates [-1, +1]
                 let isVisibleOnScreen = true;
                 if (camera && screenVec && this.showHandles) {
                     screenVec.set(p.x, p.y + 0.15, p.z);
@@ -1083,7 +1108,6 @@
 
                     let inScreenX = (screenVec.x >= -1.25 && screenVec.x <= 1.25);
                     let inScreenY = (screenVec.y >= -1.25 && screenVec.y <= 1.25);
-                    // In 2D Orthographic mode, Z elevation depth shouldn't cut off bottom-half points
                     let inScreenZ = camera.isOrthographicCamera ? true : (screenVec.z < 1.0);
 
                     isVisibleOnScreen = inScreenX && inScreenY && inScreenZ;
@@ -1091,7 +1115,6 @@
                     isVisibleOnScreen = false;
                 }
 
-                // Explicitly toggle Three.js Object3D visibility so CSS2DRenderer skips traversal
                 handle.visible = isVisibleOnScreen;
                 if (handle.elementObject) {
                     handle.elementObject.visible = isVisibleOnScreen;
@@ -1105,7 +1128,6 @@
                     classes: []
                 });
 
-                // Directly hide HTML DOM element so CSS2DRenderer & browser layout engine skip transform calculations
                 if (handle.element) {
                     handle.element.style.display = isVisibleOnScreen ? "" : "none";
                 }
@@ -1148,16 +1170,15 @@
             });
         }
 
-        generateRegularPolygonVertices(center, firstVertex, vertexCount){
+        generateRegularPolygonVertices(center, radius, angleDeg, vertexCount){
             const ret = [];
-            const dx = firstVertex.x - center.x;
-            const dz = firstVertex.z - center.z;
-
+            const angleRad = angleDeg * (Math.PI / 180);
             const dtheta = (2 * Math.PI) / vertexCount;
+
             for(let i = 0; i < vertexCount; i++){
-                const theta = i * dtheta;
-                const x = dx * Math.cos(theta) - dz * Math.sin(theta);
-                const z = dx * Math.sin(theta) + dz * Math.cos(theta);
+                const theta = angleRad + i * dtheta;
+                const x = radius * Math.cos(theta);
+                const z = radius * Math.sin(theta);
                 ret.push({
                     x: x + center.x,
                     z: z + center.z
@@ -1188,7 +1209,6 @@
             } else if (this.activeTab === "html") {
                 markerData.html = this.htmlText;
                 markerData.anchor = { x: this.anchorX, y: this.anchorY };
-
             } else if (this.activeTab === "line") {
                 markerData.line = this.points.map(p => ({ x: p.x, y: p.y, z: p.z }));
                 markerData.depthTest = this.depthTest;
@@ -1213,10 +1233,10 @@
                 markerData.fillColor = fillCol;
                 if (this.points.length < 3) canShow = false;
             } else if(this.activeTab === "regular-polygon" || this.activeTab === "extrude-regular-polygon"){
-                canShow = this.points.length >= 2;
+                canShow = this.radius > 0;
                 if(canShow){
-                    markerData.position = {x: this.points[0].x, y: this.points[0].y, z: this.points[0].z};
-                    markerData.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
+                    markerData.position = {x: this.position.x, y: this.position.y, z: this.position.z};
+                    markerData.shape = this.generateRegularPolygonVertices(this.position, this.radius, this.angle, this.vertices);
                     if (this.activeTab === "extrude-regular-polygon") {
                         markerData.shapeMinY = this.shapeMinY;
                         markerData.shapeMaxY = this.shapeMaxY;
@@ -1335,8 +1355,6 @@
             return null;
         }
 
-        
-
         generateBmmJson() {
             let mapName = window.bluemap?.mapViewer?.map?.data?.id || "world";
             let lbl = this.label || "Unnamed";
@@ -1345,8 +1363,7 @@
             if (this.activeTab === "bmm") {
                 // Original BMM logic
                 let edges = this.points.map(p => `"${parseFloat(p.x).toFixed(1)},${parseFloat(p.z).toFixed(1)}"`).join(",\n          ");
-                let detailPart = (this.detail) ? `
-      "DETAIL": { "type": "de.miraculixx.bmm.map.data.Box.BoxString", "value": "${this.detail}" },` : "";
+                let detailPart = (this.detail) ? `\n      "DETAIL": { "type": "de.miraculixx.bmm.map.data.Box.BoxString", "value": "${this.detail}" },` : "";
                 return `{
   "${id}": {
     "owner": "${this.owner}",
@@ -1409,8 +1426,8 @@
                 base["line-color"] = { r: this.fillColor.r, g: this.fillColor.g, b: this.fillColor.b, a: 1.0 };
                 base["fill-color"] = this.fillColor;
             } else if (this.activeTab === "regular-polygon" || this.activeTab === "extrude-regular-polygon"){
-                if(this.points.length >= 2){
-                    base.shape = this.generateRegularPolygonVertices(this.points[0], this.points[1], this.vertices);
+                if(this.radius > 0){
+                    base.shape = this.generateRegularPolygonVertices(this.position, this.radius, this.angle, this.vertices);
                 }else{
                     base.shape = [];
                 }
@@ -1440,7 +1457,6 @@
             try {
                 // Parse the HOCON/Loose-JSON text
                 let json = ("{" + confStr + "}").replace(/([{,]\s*)([a-zA-Z0-9_-]+)\s*:/g, '$1"$2":');
-                console.log(json);
                 let parsed = JSON.parse(json);
                 let id = Object.keys(parsed)[0];
                 let marker = parsed[id];
@@ -1502,7 +1518,7 @@
                         this.points = marker.line.map(p => ({ x: p.x, y: p.y, z: p.z }));
                     }
                 } 
-                else if (this.activeTab === "shape") {
+                else if (this.activeTab === "shape" || this.activeTab === "regular-polygon") {
                     this.shapeY = marker["shape-y"] !== undefined ? marker["shape-y"] : 64;
                     if (Array.isArray(marker.shape)) {
                         // Shapes only store X and Z, we use the base position Y for the 3D visual editor points
@@ -1625,7 +1641,11 @@
 
             document.getElementById("bmm-color-opacity").value = this.fillColor.a;
             document.getElementById("bmm-opacity-text").innerText = Math.round(this.fillColor.a * 100) + "%";
+            
             document.getElementById("bmm-input-vertices").value = this.vertices;
+            if (document.getElementById("bmm-input-radius")) document.getElementById("bmm-input-radius").value = this.radius;
+            if (document.getElementById("bmm-input-angle")) document.getElementById("bmm-input-angle").value = this.angle;
+            if (document.getElementById("bmm-slider-angle")) document.getElementById("bmm-slider-angle").value = this.angle;
         }
 
         updateUIPointsList() {
@@ -1645,7 +1665,6 @@
                 return;
             }
 
-            // Virtual Scrolling (Windowing): total height represents all items, but only visible items are rendered
             const ITEM_HEIGHT = 28;
             const totalHeight = this.points.length * ITEM_HEIGHT;
             const containerHeight = container.clientHeight || 120;
